@@ -60,3 +60,7 @@ Thumbs.db
 /scripts/docker-smoke.mjs
 /scripts/docker-prod-smoke.mjs
 /scripts/ci.mjs
+.env.scheduler.example
+.env.production.example
+.env.example
+.env.backup.example
