@@ -1,0 +1,5 @@
+// Fase 0: sin entidades, seeds ni migraciones de negocio.
+datasource db {
+  provider = "postgresql"
+}
+

@@ -1,0 +1,66 @@
+{
+  "name": "tibelio-saas",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.20.0 <23",
+    "npm": ">=10.9.3 <11"
+  },
+  "packageManager": "npm@10.9.3",
+  "scripts": {
+    "dev": "next dev --hostname 127.0.0.1",
+    "build": "next build",
+    "start": "next start --hostname 127.0.0.1",
+    "lint": "eslint . --max-warnings=0",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:db": "vitest run --config vitest.db.config.ts",
+    "test:e2e:db": "playwright test --config playwright.db.config.ts",
+    "test:platform": "node scripts/test-platform.mjs",
+    "db:prepare-admin": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/prepare-superadmin.ps1",
+    "db:reset-admin": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/reset-superadmin.ps1",
+    "check": "npm run lint && npm run typecheck && npm test && npm run db:validate && npm run build && node scripts/check-build-privacy.mjs",
+    "ci": "node scripts/ci.mjs",
+    "db:validate": "prisma validate",
+    "db:check": "node --conditions=react-server --import tsx scripts/check-database.ts",
+    "db:check:phase1": "node --conditions=react-server --import tsx scripts/check-phase1.ts",
+    "db:backup": "node scripts/backup-db.mjs",
+    "db:restore": "node scripts/restore-db.mjs",
+    "db:verify-backup": "node scripts/verify-backup-restore.mjs",
+    "scheduler": "node scripts/scheduler.mjs",
+    "docker:smoke": "node scripts/docker-smoke.mjs"
+  },
+  "dependencies": {
+    "argon2": "0.45.1",
+    "next": "16.4.0",
+    "pg": "8.23.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "server-only": "0.0.1",
+    "web-push": "3.6.7",
+    "zod": "4.6.5"
+  },
+  "overrides": {
+    "prisma": {
+      "mysql2": "3.24.5"
+    }
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.0",
+    "@types/node": "22.20.5",
+    "@types/pg": "8.23.1",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/web-push": "3.6.4",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.4.0",
+    "prettier": "3.9.9",
+    "prisma": "7.10.0",
+    "supabase": "2.120.0",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "vitest": "5.0.3"
+  }
+}

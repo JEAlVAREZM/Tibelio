@@ -1,0 +1,51 @@
+{
+	admin off
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
+
+{$APP_DOMAIN} {
+	{$CADDY_TLS_CONFIG}
+
+	# Cabeceras de seguridad estrictas
+	header {
+		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(self)"
+		-Server
+	}
+
+	# Compresión zstd y gzip
+	encode zstd gzip
+
+	# Enrutamiento inverso al contenedor de aplicación Next.js
+	reverse_proxy app:3000 {
+		header_up Host {host}
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+
+		transport http {
+			response_header_timeout 30s
+			dial_timeout 5s
+		}
+	}
+
+	# Bloqueo explícito de acceso público a rutas de almacenamiento privado y configuración
+	@blocked {
+		path /storage/*
+		path /.env*
+		path /private/*
+	}
+	respond @blocked 404
+
+	# Registro estructurado JSON sin credenciales
+	log {
+		output stdout
+		format json
+		level INFO
+	}
+}

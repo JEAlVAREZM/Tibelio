@@ -1,0 +1,127 @@
+name: tibelio-prod
+
+services:
+  app:
+    build:
+      context: .
+      target: prod
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+      APP_ORIGIN: ${APP_ORIGIN:?Configure APP_ORIGIN in the production env file}
+      DATABASE_CA_FILE: /run/tibelio/certs/supabase-prod-ca-2021.crt
+      PRIVATE_STORAGE_ROOT: /srv/tibelio/storage/production
+    env_file:
+      - path: .env.production
+        required: true
+    volumes:
+      - production_storage:/srv/tibelio/storage/production
+      - ./certs:/run/tibelio/certs:ro
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 6
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  scheduler:
+    build:
+      context: .
+      target: prod
+    command: ["node", "scripts/scheduler.mjs", "--daemon"]
+    restart: unless-stopped
+    env_file:
+      - .env.scheduler
+    environment:
+      APP_ENV: production
+      DATABASE_CA_FILE: /run/tibelio/certs/supabase-prod-ca-2021.crt
+    volumes:
+      - ./certs:/run/tibelio/certs:ro
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    init: true
+    healthcheck:
+      test: ["CMD", "node", "scripts/worker-health.mjs"]
+      interval: 60s
+      timeout: 5s
+      start_period: 60s
+      retries: 2
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "5"}
+
+  backup:
+    build:
+      context: .
+      target: prod
+    command: ["node", "scripts/backup-daemon.mjs"]
+    restart: unless-stopped
+    env_file:
+      - .env.backup
+    environment:
+      APP_ENV: production
+      NODE_EXTRA_CA_CERTS: /run/tibelio/certs/supabase-prod-ca-2021.crt
+      PRIVATE_STORAGE_ROOT: /srv/tibelio/storage/production
+      BACKUP_OUTPUT_ROOT: /srv/tibelio/backups
+    volumes:
+      - production_storage:/srv/tibelio/storage/production:ro
+      - production_backups:/srv/tibelio/backups
+      - ./certs:/run/tibelio/certs:ro
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    init: true
+    healthcheck:
+      test: ["CMD", "node", "scripts/worker-health.mjs", "--backup"]
+      interval: 5m
+      timeout: 5s
+      start_period: 5m
+      retries: 2
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "5"}
+
+  proxy:
+    image: caddy:2.9.1-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?Configure APP_DOMAIN in the production env file}
+      CADDY_TLS_CONFIG: ${CADDY_TLS_CONFIG:-}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+volumes:
+  production_backups:
+  production_storage:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,1 @@
+export function prepareFilesRestore(backupDir: string, storageDir: string, files: Array<{relativePath: string}>): Promise<{activate(): Promise<void>; rollback(): Promise<void>; previousPath: string}>;

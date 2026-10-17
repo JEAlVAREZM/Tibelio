@@ -1,0 +1,33 @@
+name: tibelio-dev
+services:
+  app:
+    build:
+      context: .
+      target: dev
+    ports:
+      - "127.0.0.1:3101:3000"
+    environment:
+      APP_ENV: development
+      APP_ORIGIN: http://127.0.0.1:3101
+      DATABASE_CA_FILE: /run/tibelio/certs/supabase-prod-ca-2021.crt
+      NEXT_TELEMETRY_DISABLED: "1"
+      PRIVATE_STORAGE_ROOT: /srv/tibelio/storage/development
+    env_file:
+      - path: .env.local
+        required: false
+    volumes:
+      - private_storage:/srv/tibelio/storage/development
+      - ./.local/certs:/run/tibelio/certs:ro
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 6
+volumes:
+  private_storage:
